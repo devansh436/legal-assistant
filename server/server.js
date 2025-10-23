@@ -18,9 +18,7 @@ const cors = require('cors');
 
 // CORS configuration for production
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-app-name.vercel.app'] // We'll update this after deploying frontend
-    : 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   optionsSuccessStatus: 200
 };
