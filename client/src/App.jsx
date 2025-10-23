@@ -20,7 +20,6 @@ import ChatDisplay from './components/ChatDisplay';
 import AudioPlayer from './components/AudioPlayer';
 import UserProfile from './components/UserProfile';
 import { userAPI, voiceAPI } from './services/api';
-import websocketService from './services/websocketService';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -59,47 +58,11 @@ function App() {
         setUser(userData);
       }
 
-      connectWebSocket(userId);
+      // No WebSocket - using REST API only
+      showNotification('Connected to AI assistant', 'success');
     } catch (error) {
       console.error('Error initializing user:', error);
       showNotification('Failed to initialize user', 'error');
-    }
-  };
-
-  const connectWebSocket = async (userId) => {
-    try {
-      await websocketService.connect(userId);
-
-      websocketService.on('transcript', (data) => {
-        addMessage({
-          role: data.role,
-          content: data.text,
-          timestamp: new Date(),
-        });
-      });
-
-      websocketService.on('assistant_response', (data) => {
-        addMessage({
-          role: 'assistant',
-          content: data.text,
-          timestamp: new Date(),
-        });
-      });
-
-      websocketService.on('audio', (data) => {
-        const audioBlob = base64ToBlob(data.data, 'audio/mp3');
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
-      });
-
-      websocketService.on('error', (data) => {
-        showNotification(data.message, 'error');
-        setIsProcessing(false);
-      });
-
-      showNotification('Connected to AI assistant', 'success');
-    } catch (error) {
-      console.error('WebSocket connection error:', error);
     }
   };
 
@@ -107,7 +70,8 @@ function App() {
     setIsProcessing(true);
     
     try {
-      // Step 1: Transcribe first
+      // Step 1: Transcribe
+      console.log('🎤 Transcribing audio...');
       const transcribeResponse = await voiceAPI.transcribe(audioBlob);
       
       addMessage({
@@ -119,6 +83,7 @@ function App() {
       showNotification('Transcript received', 'info');
 
       // Step 2: Process with AI
+      console.log('🤖 Processing with AI...');
       const aiResponse = await voiceAPI.processQuery(
         transcribeResponse.transcript, 
         user._id
@@ -130,19 +95,23 @@ function App() {
         timestamp: new Date(),
       });
 
+      // Step 3: Handle TTS audio
       if (aiResponse.audioUrl) {
-        if (aiResponse.audioUrl.startsWith('data:')) {
-          setAudioUrl(aiResponse.audioUrl);
-        } else if (aiResponse.audioUrl.startsWith('http')) {
-          setAudioUrl(aiResponse.audioUrl);
-        } else {
-          setAudioUrl(`http://localhost:5000${aiResponse.audioUrl}`);
-        }
+        console.log('🔊 Audio URL received:', aiResponse.audioUrl);
+        
+        const fullAudioUrl = aiResponse.audioUrl.startsWith('http') 
+          ? aiResponse.audioUrl 
+          : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${aiResponse.audioUrl}`;
+        
+        setAudioUrl(fullAudioUrl);
+        console.log('🔊 Playing audio:', fullAudioUrl);
+      } else {
+        console.warn('⚠️ No audio URL in response');
       }
 
       showNotification('Response received', 'success');
     } catch (error) {
-      console.error('Error sending audio:', error);
+      console.error('❌ Error processing audio:', error);
       showNotification('Failed to process audio', 'error');
     } finally {
       setIsProcessing(false);
@@ -172,17 +141,6 @@ function App() {
     setNotification({ open: false, message: '', severity: 'info' });
   };
 
-  const base64ToBlob = (base64, mimeType) => {
-    const byteCharacters = atob(base64);
-    const byteArrays = [];
-
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteArrays.push(byteCharacters.charCodeAt(i));
-    }
-
-    return new Blob([new Uint8Array(byteArrays)], { type: mimeType });
-  };
-
   return (
     <Box
       sx={{
@@ -191,7 +149,7 @@ function App() {
         color: '#ffffff',
       }}
     >
-      {/* App Bar - Dark */}
+      {/* App Bar */}
       <AppBar
         position="sticky"
         elevation={0}
@@ -236,7 +194,7 @@ function App() {
         </Toolbar>
       </AppBar>
 
-      {/* Tabs - Dark */}
+      {/* Tabs */}
       <Box
         sx={{
           bgcolor: '#000000',
@@ -270,7 +228,7 @@ function App() {
         </Container>
       </Box>
 
-      {/* Content - Side by Side Layout */}
+      {/* Content */}
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Fade in timeout={500}>
           <Box>
