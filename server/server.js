@@ -14,8 +14,6 @@ const path = require('path');
 app.use('/audio', express.static(path.join(__dirname, 'public', 'audio')));
 
 
-const cors = require('cors');
-
 // CORS configuration for production
 const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
