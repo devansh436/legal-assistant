@@ -14,8 +14,18 @@ const path = require('path');
 app.use('/audio', express.static(path.join(__dirname, 'public', 'audio')));
 
 
-// Middleware
-app.use(cors());
+const cors = require('cors');
+
+// CORS configuration for production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://your-app-name.vercel.app'] // We'll update this after deploying frontend
+    : 'http://localhost:5173',
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // MongoDB Connection

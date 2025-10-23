@@ -1,15 +1,14 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+// Use environment variable in production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-// Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
 
 
 // User API calls
@@ -54,15 +53,14 @@ export const conversationAPI = {
   },
 };
 
-// Voice API calls
+// Update voice API URLs
 export const voiceAPI = {
-  // Step 1: Transcribe audio only (FAST)
   transcribe: async (audioBlob) => {
     const formData = new FormData();
     formData.append('audio', audioBlob, 'recording.webm');
 
     const response = await axios.post(
-      'http://localhost:5000/api/conversations/transcribe',
+      `${API_BASE_URL}/api/conversations/transcribe`,
       formData,
       {
         headers: {
@@ -73,23 +71,21 @@ export const voiceAPI = {
     return response.data;
   },
 
-  // Step 2: Process transcript with AI
   processQuery: async (transcript, userId) => {
     const response = await axios.post(
-      'http://localhost:5000/api/conversations/process-query',
+      `${API_BASE_URL}/api/conversations/process-query`,
       { transcript, userId }
     );
     return response.data;
   },
 
-  // Original combined endpoint (keep for backward compatibility)
   sendAudio: async (audioBlob, userId) => {
     const formData = new FormData();
     formData.append('audio', audioBlob, 'recording.webm');
     formData.append('userId', userId);
 
     const response = await axios.post(
-      'http://localhost:5000/api/conversations/voice-query',
+      `${API_BASE_URL}/api/conversations/voice-query`,
       formData,
       {
         headers: {

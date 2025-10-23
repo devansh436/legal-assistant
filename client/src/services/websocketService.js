@@ -9,7 +9,13 @@ class WebSocketService {
   connect(userId) {
     return new Promise((resolve, reject) => {
       try {
-        this.ws = new WebSocket(`ws://localhost:5000?userId=${userId}`);
+        // Use production URL if available
+        const wsUrl = import.meta.env.VITE_API_URL 
+          ? import.meta.env.VITE_API_URL.replace('https://', 'wss://').replace('http://', 'ws://')
+          : 'ws://localhost:5000';
+
+        this.ws = new WebSocket(`${wsUrl}?userId=${userId}`);
+
 
         this.ws.onopen = () => {
           console.log('✅ WebSocket connected');
