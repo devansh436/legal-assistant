@@ -18,6 +18,15 @@ const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 const audioDir = path.join(__dirname, "..", "public", "audio");
 fs.mkdir(audioDir, { recursive: true }).catch(console.error);
 
+// Helper to ensure DB connection
+const ensureConnection = async () => {
+  if (mongoose.connection.readyState !== 1) {
+    console.log('⚠️ MongoDB disconnected, reconnecting...');
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ MongoDB reconnected');
+  }
+};
+
 // NEW: Fast STT-only endpoint
 router.post("/transcribe", upload.single("audio"), async (req, res) => {
   try {
