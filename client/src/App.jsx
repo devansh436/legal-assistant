@@ -71,29 +71,79 @@ function App() {
   };
 
   const handleSendAudio = async (audioBlob) => {
-  setIsProcessing(true);
-  
-  try {
-    // Safety check: ensure user is loaded
-    if (!user || !user._id) {
-      console.error('❌ User not loaded');
-      showNotification('User not initialized. Please refresh the page.', 'error');
+    setIsProcessing(true);
+
+    try {
+      // Safety check: ensure user is loaded
+      if (!user || !user._id) {
+        console.error("❌ User not loaded");
+        showNotification(
+          "User not initialized. Please refresh the page.",
+          "error"
+        );
+        setIsProcessing(false);
+        return;
+      }
+
+      // Step 1: Transcribe
+      console.log("🎤 Transcribing audio...");
+      const transcribeResponse = await voiceAPI.transcribe(audioBlob);
+
+      addMessage({
+        role: "user",
+        content: transcribeResponse.transcript,
+        timestamp: new Date(),
+      });
+
+      showNotification("Transcript received", "info");
+
+      // Step 2: Process with AI
+      console.log("🤖 Processing with AI...");
+      const aiResponse = await voiceAPI.processQuery(
+        transcribeResponse.transcript,
+        user._id
+      );
+
+      addMessage({
+        role: "assistant",
+        content: aiResponse.response,
+        timestamp: new Date(),
+      });
+
+      // Step 3: Handle TTS audio
+      if (aiResponse.audioUrl) {
+        console.log("🔊 Audio URL received");
+
+        // Check if it's a data URL (base64) - starts with "data:"
+        if (aiResponse.audioUrl.startsWith("data:")) {
+          setAudioUrl(aiResponse.audioUrl);
+          console.log("🔊 Using data URL (Vercel)");
+        }
+        // Check if it's already a complete HTTP URL
+        else if (aiResponse.audioUrl.startsWith("http")) {
+          setAudioUrl(aiResponse.audioUrl);
+          console.log("🔊 Using HTTP URL");
+        }
+        // It's a relative path - add API base URL
+        else {
+          const fullAudioUrl = `${
+            import.meta.env.VITE_API_URL || "http://localhost:5000"
+          }${aiResponse.audioUrl}`;
+          setAudioUrl(fullAudioUrl);
+          console.log("🔊 Using relative path:", fullAudioUrl);
+        }
+      } else {
+        console.warn("⚠️ No audio URL in response");
+      }
+
+      showNotification("Response received", "success");
+    } catch (error) {
+      console.error("❌ Error processing audio:", error);
+      showNotification("Failed to process audio", "error");
+    } finally {
       setIsProcessing(false);
-      return;
     }
-    
-    // Step 1: Transcribe
-    console.log('🎤 Transcribing audio...');
-    const transcribeResponse = await voiceAPI.transcribe(audioBlob);
-    
-    // ... rest of your code
-  } catch (error) {
-    console.error('❌ Error processing audio:', error);
-    showNotification('Failed to process audio', 'error');
-  } finally {
-    setIsProcessing(false);
-  }
-};
+  };
 
   const handleUpdatePreferences = async (preferences) => {
     try {
